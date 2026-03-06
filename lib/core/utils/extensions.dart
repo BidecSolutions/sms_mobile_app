@@ -83,5 +83,32 @@ extension BuildContextExtensions on BuildContext {
   /// Correctly handles go_router's navigation stack
   void pop() => GoRouter.of(this).pop();
 
-/// Navigates to a new route using go_router
-/// Cle
+  /// Navigates to a new route using go_router
+  /// Clears the back stack — user cannot go back
+  /// Use for: after login → dashboard, after splash → login
+  void goTo(String path) => GoRouter.of(this).go(path);
+
+  /// Pushes a new route using go_router
+  /// Keeps the back stack — user can go back
+  /// Use for: list → detail screens
+  void pushTo(String path) => GoRouter.of(this).push(path);
+
+  // ── Keyboard ───────────────────────────────────────────────────────────────
+  /// Hides the software keyboard
+  /// Call before navigating away from a form screen
+  void hideKeyboard() => FocusScope.of(this).unfocus();
+}
+
+// ─── Number Extensions ────────────────────────────────────────────────────────
+extension NumberExtensions on num {
+  /// Converts number to a readable file size string
+  /// Example: 1024.toFileSize() → '1 KB'
+  String toFileSize() {
+    if (this < 1024) return '$this B';
+    if (this < 1024 * 1024) return '${(this / 1024).toStringAsFixed(1)} KB';
+    if (this < 1024 * 1024 * 1024) {
+      return '${(this / (1024 * 1024)).toStringAsFixed(1)} MB';
+    }
+    return '${(this / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
+  }
+}
