@@ -18,6 +18,7 @@ class AppStrings {
   static const String yes = 'Yes';
   static const String no = 'No';
   static const String ok = 'OK';
+  static const String gotIt = 'Got it';
   static const String back = 'Back';
   static const String next = 'Next';
   static const String done = 'Done';

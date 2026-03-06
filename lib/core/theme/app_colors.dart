@@ -83,4 +83,26 @@ class AppColors {
 
   /// Color associated with Teacher role
   static const Color teacherColor = Color(0xFFFA7B17);
+
+  // ─── Base ────────────────────────────────────────────────────────────────
+  /// Pure white — used for text on dark backgrounds, button labels
+  static const Color white = Color(0xFFFFFFFF);
+
+  /// Pure black — used for overlays and shadows
+  static const Color black = Color(0xFF000000);
+
+  // ─── Input ───────────────────────────────────────────────────────────────
+  /// Background fill color for input fields
+  /// TODO: Update with real color from Figma
+  static const Color inputFill = Color(0xFFF1F3F4);
+
+  // ─── Avatar Colors ───────────────────────────────────────────────────────
+  /// Used in AppAvatar to give each user a consistent background color
+  /// Color is picked based on user's name hashCode
+  /// TODO: Update with real colors from Figma if needed
+  static const Color avatarColor1 = Color(0xFF5C6BC0); // Indigo
+  static const Color avatarColor2 = Color(0xFF26A69A); // Teal
+  static const Color avatarColor3 = Color(0xFFEF5350); // Red
+  static const Color avatarColor4 = Color(0xFFFFA726); // Orange
+  static const Color avatarColor5 = Color(0xFF66BB6A); // Green
 }
