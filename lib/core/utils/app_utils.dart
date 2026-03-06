@@ -2,7 +2,15 @@
 /// Contains general utility helper functions used throughout the app.
 /// These are standalone functions that don't belong in extensions or validators.
 /// Import this file wherever these helpers are needed.
+///
+/// Changes from original:
+///   → Removed duplicate hideKeyboard — use context.hideKeyboard() from extensions.dart
+///   → Removed private capitalize extension — now imports from extensions.dart
+///   → showSuccessSnackbar/showErrorSnackbar will be replaced by app_snackbar.dart
+///     but kept here temporarily until app_snackbar.dart is created
+///   → getRoleLabel now uses .capitalize getter from extensions.dart
 import 'package:flutter/material.dart';
+import 'extensions.dart';
 
 class AppUtils {
   AppUtils._(); // Private constructor — prevents instantiation
@@ -50,17 +58,13 @@ class AppUtils {
     return Color(int.parse(buffer.toString(), radix: 16));
   }
 
-  // ─── Keyboard Helpers ────────────────────────────────────────────────────
-
-  /// Hides the software keyboard
-  /// Call this before navigating away from a form screen
-  static void hideKeyboard(BuildContext context) {
-    FocusScope.of(context).unfocus();
-  }
-
   // ─── Snackbar Helpers ────────────────────────────────────────────────────
+  /// NOTE: These will be replaced by app_snackbar.dart reusable widget
+  /// once core/widgets/ files are created.
+  /// Kept here temporarily for use before app_snackbar.dart is ready.
 
   /// Shows a success snackbar with green background
+  /// TODO: Replace with AppSnackbar.showSuccess() once app_snackbar.dart is created
   static void showSuccessSnackbar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -72,6 +76,7 @@ class AppUtils {
   }
 
   /// Shows an error snackbar with red background
+  /// TODO: Replace with AppSnackbar.showError() once app_snackbar.dart is created
   static void showErrorSnackbar(BuildContext context, String message) {
     ScaffoldMessenger.of(context).showSnackBar(
       SnackBar(
@@ -85,6 +90,7 @@ class AppUtils {
   // ─── Role Helpers ────────────────────────────────────────────────────────
 
   /// Returns a human-readable role label from role string
+  /// Uses .capitalize getter from extensions.dart
   /// Example: 'student' → 'Student', 'teacher' → 'Teacher'
   static String getRoleLabel(String role) {
     switch (role.toLowerCase()) {
@@ -95,15 +101,8 @@ class AppUtils {
       case 'teacher':
         return 'Teacher';
       default:
-        return role.capitalize();
+      /// Falls back to capitalize from extensions.dart
+        return role.capitalize;
     }
-  }
-}
-
-/// Private extension used only inside this file
-extension on String {
-  String capitalize() {
-    if (isEmpty) return this;
-    return '${this[0].toUpperCase()}${substring(1)}';
   }
 }

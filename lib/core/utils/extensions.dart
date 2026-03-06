@@ -2,7 +2,14 @@
 /// Contains all Dart extension methods used throughout the app.
 /// Extensions add helper methods to existing types without modifying them.
 /// Import this file wherever these helpers are needed.
+///
+/// Changes from original:
+///   → Removed duplicate hideKeyboard (kept in app_utils.dart as static method)
+///   → Removed basic showSnackBar (app_utils.dart has better typed versions)
+///   → Removed duplicate date formatting (date_formatter.dart has proper intl support)
+///   → Fixed pop() to use go_router instead of Navigator
 import 'package:flutter/material.dart';
+import 'package:go_router/go_router.dart';
 
 // ─── String Extensions ───────────────────────────────────────────────────────
 extension StringExtensions on String {
@@ -48,54 +55,6 @@ extension NullableStringExtensions on String? {
   }
 }
 
-// ─── DateTime Extensions ─────────────────────────────────────────────────────
-extension DateTimeExtensions on DateTime {
-  /// Formats date as 'DD MMM YYYY'
-  /// Example: 25 Dec 2024
-  String get formattedDate {
-    const months = [
-      'Jan', 'Feb', 'Mar', 'Apr', 'May', 'Jun',
-      'Jul', 'Aug', 'Sep', 'Oct', 'Nov', 'Dec'
-    ];
-    return '$day ${months[month - 1]} $year';
-  }
-
-  /// Formats time as 'HH:MM AM/PM'
-  /// Example: 09:30 AM
-  String get formattedTime {
-    final hour = this.hour > 12 ? this.hour - 12 : this.hour;
-    final minute = this.minute.toString().padLeft(2, '0');
-    final period = this.hour >= 12 ? 'PM' : 'AM';
-    return '$hour:$minute $period';
-  }
-
-  /// Formats date and time together
-  /// Example: 25 Dec 2024, 09:30 AM
-  String get formattedDateTime => '$formattedDate, $formattedTime';
-
-  /// Returns true if the date is today
-  bool get isToday {
-    final now = DateTime.now();
-    return day == now.day && month == now.month && year == now.year;
-  }
-
-  /// Returns true if the date is yesterday
-  bool get isYesterday {
-    final yesterday = DateTime.now().subtract(const Duration(days: 1));
-    return day == yesterday.day &&
-        month == yesterday.month &&
-        year == yesterday.year;
-  }
-
-  /// Returns a human-readable relative time
-  /// Example: 'Today', 'Yesterday', '25 Dec 2024'
-  String get relativeDate {
-    if (isToday) return 'Today';
-    if (isYesterday) return 'Yesterday';
-    return formattedDate;
-  }
-}
-
 // ─── BuildContext Extensions ──────────────────────────────────────────────────
 extension BuildContextExtensions on BuildContext {
   // ── Screen Size ────────────────────────────────────────────────────────────
@@ -119,32 +78,10 @@ extension BuildContextExtensions on BuildContext {
   TextTheme get textTheme => Theme.of(this).textTheme;
 
   // ── Navigation ─────────────────────────────────────────────────────────────
-  /// Pops the current route off the navigator
-  void pop<T>([T? result]) => Navigator.of(this).pop(result);
+  /// Pops the current route using go_router
+  /// Use this instead of Navigator.of(context).pop()
+  /// Correctly handles go_router's navigation stack
+  void pop() => GoRouter.of(this).pop();
 
-  // ── Snackbar ───────────────────────────────────────────────────────────────
-  /// Shows a simple snackbar with a message
-  void showSnackBar(String message) {
-    ScaffoldMessenger.of(this).showSnackBar(
-      SnackBar(content: Text(message)),
-    );
-  }
-
-  // ── Keyboard ───────────────────────────────────────────────────────────────
-  /// Hides the keyboard
-  void hideKeyboard() => FocusScope.of(this).unfocus();
-}
-
-// ─── Number Extensions ────────────────────────────────────────────────────────
-extension NumberExtensions on num {
-  /// Converts number to a readable file size string
-  /// Example: 1024.toFileSize() → '1 KB'
-  String toFileSize() {
-    if (this < 1024) return '$this B';
-    if (this < 1024 * 1024) return '${(this / 1024).toStringAsFixed(1)} KB';
-    if (this < 1024 * 1024 * 1024) {
-      return '${(this / (1024 * 1024)).toStringAsFixed(1)} MB';
-    }
-    return '${(this / (1024 * 1024 * 1024)).toStringAsFixed(1)} GB';
-  }
-}
+/// Navigates to a new route using go_router
+/// Cle
