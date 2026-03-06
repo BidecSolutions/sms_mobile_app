@@ -1,0 +1,83 @@
+name: sms
+description: School Management System - A comprehensive app for students, parents, and teachers.
+publish_to: 'none'
+version: 1.0.0+1
+
+environment:
+  sdk: '>=3.8.1 <4.0.0'
+
+dependencies:
+  flutter:
+    sdk: flutter
+  flutter_localizations:
+    sdk: flutter
+
+  # ─── State Management ───────────────────────────────
+  flutter_bloc: ^8.1.6
+  equatable: ^2.0.5
+
+  # ─── Navigation ─────────────────────────────────────
+  go_router: ^14.2.7
+
+  # ─── Networking ─────────────────────────────────────
+  dio: ^5.7.0
+  pretty_dio_logger: ^1.4.0
+
+  # ─── Dependency Injection ───────────────────────────
+  get_it: ^8.0.2
+  injectable: ^2.4.4
+
+  # ─── Code Generation ────────────────────────────────
+  freezed_annotation: ^2.4.4
+  json_annotation: ^4.9.0
+
+  # ─── Secure Storage ─────────────────────────────────
+  flutter_secure_storage: ^9.2.2
+
+  # ─── Responsiveness ─────────────────────────────────
+  flutter_screenutil: ^5.9.3
+
+  # ─── Video ──────────────────────────────────────────
+  youtube_player_flutter: ^9.1.1
+
+  # ─── WebSockets (Laravel Reverb) ────────────────────
+  laravel_echo_null: ^0.0.8+1
+  pusher_client_socket: ^0.0.4
+  socket_io_client: ^2.0.3+1
+
+  # ─── Firebase ───────────────────────────────────────
+  firebase_core: ^3.6.0
+  firebase_messaging: ^15.1.3
+
+  # ─── Notifications ──────────────────────────────────
+  flutter_local_notifications: ^17.2.3
+
+  # ─── Image & Network ────────────────────────────────
+  cached_network_image: ^3.4.1
+
+  # ─── Utils ──────────────────────────────────────────
+  intl: ^0.20.2
+  logger: ^2.4.0
+  connectivity_plus: ^6.1.0
+  permission_handler: ^11.3.1
+
+  flutter_svg: ^2.0.10+1
+
+dev_dependencies:
+  flutter_test:
+    sdk: flutter
+  flutter_lints: ^5.0.0
+
+  # ─── Code Generation ────────────────────────────────
+  build_runner: ^2.4.13
+  freezed: ^2.5.7
+  json_serializable: ^6.8.0
+  injectable_generator: ^2.6.2
+
+flutter:
+  uses-material-design: true
+  assets:
+    - assets/images/
+    - assets/icons/
+    - assets/animations/
+  fonts: []
