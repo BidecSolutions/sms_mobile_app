@@ -23,6 +23,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import '../constants/app_routes.dart';
 import '../utils/app_logger.dart';
+import 'package:go_router/go_router.dart';
 
 /// Background message handler
 /// MUST be a top-level function (not inside a class)
@@ -150,7 +151,7 @@ class NotificationService {
     );
 
     await _localNotifications
-        .resolvePlatformSpecificImplementation
+        .resolvePlatformSpecificImplementation<
     AndroidFlutterLocalNotificationsPlugin>()
         ?.createNotificationChannel(channel);
 
@@ -288,7 +289,7 @@ class NotificationService {
     ///   break;
       default:
       /// Default — navigate to notifications screen
-        context.pushTo(AppRoutes.notifications);
+        context.push(AppRoutes.notifications);
         break;
     }
   }

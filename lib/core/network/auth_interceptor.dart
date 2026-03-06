@@ -2,7 +2,7 @@
 /// A Dio interceptor that automatically manages Sanctum token authentication.
 ///
 /// BEFORE every request:
-///   → Reads Sanctum token from flutter_secure_storage
+///   → Reads Sanctum token from SecureStorageService
 ///   → Attaches 'Authorization: Bearer {token}' header
 ///   → Attaches 'Accept: application/json' header
 ///
@@ -15,18 +15,19 @@
 ///
 /// Changes from original:
 ///   → Fixed 401 redirect to use go_router instead of pushNamedAndRemoveUntil
-///     Navigator named routes don't work with go_router
+///   → Replaced FlutterSecureStorage with SecureStorageService
+///     SecureStorageService provides clean typed methods for token access
 import 'package:dio/dio.dart';
 import 'package:flutter/material.dart';
-import 'package:flutter_secure_storage/flutter_secure_storage.dart';
 import 'package:go_router/go_router.dart';
-import '../constants/app_constants.dart';
 import '../constants/app_routes.dart';
+import '../services/secure_storage_service.dart';
 import '../utils/app_logger.dart';
 
 class AuthInterceptor extends Interceptor {
-  /// Secure storage instance to read the Sanctum token
-  final FlutterSecureStorage secureStorage;
+  /// SecureStorageService to read/clear Sanctum token and user data
+  /// Uses typed methods instead of raw key-value access
+  final SecureStorageService storageService;
 
   /// Navigator key to access context for go_router navigation
   /// Used to redirect to login without needing a BuildContext directly
@@ -34,7 +35,7 @@ class AuthInterceptor extends Interceptor {
   final GlobalKey<NavigatorState> navigatorKey;
 
   const AuthInterceptor({
-    required this.secureStorage,
+    required this.storageService,
     required this.navigatorKey,
   });
 
@@ -47,14 +48,14 @@ class AuthInterceptor extends Interceptor {
       RequestOptions options,
       RequestInterceptorHandler handler,
       ) async {
-    // Read Sanctum token from secure storage
-    final token = await secureStorage.read(key: AppConstants.tokenKey);
+    /// Read Sanctum token from SecureStorageService
+    final token = await storageService.getToken();
 
-    // Attach standard headers required by Laravel backend
+    /// Attach standard headers required by Laravel backend
     options.headers['Accept'] = 'application/json';
     options.headers['Content-Type'] = 'application/json';
 
-    // Attach Sanctum Bearer token if available
+    /// Attach Sanctum Bearer token if available
     if (token != null && token.isNotEmpty) {
       options.headers['Authorization'] = 'Bearer $token';
       AppLogger.debug('AuthInterceptor: Token attached to request');
@@ -64,7 +65,7 @@ class AuthInterceptor extends Interceptor {
       );
     }
 
-    // Continue with the request
+    /// Continue with the request
     return handler.next(options);
   }
 
@@ -94,15 +95,12 @@ class AuthInterceptor extends Interceptor {
         'AuthInterceptor: 401 Unauthorized — clearing storage and redirecting to login',
       );
 
-      // Clear all stored auth data from secure storage
-      await secureStorage.delete(key: AppConstants.tokenKey);
-      await secureStorage.delete(key: AppConstants.roleKey);
-      await secureStorage.delete(key: AppConstants.userIdKey);
-      await secureStorage.delete(key: AppConstants.userNameKey);
+      /// Clear all stored auth data using SecureStorageService
+      /// Wipes token, role, userId, userName in one call
+      await storageService.clearAll();
 
-      // Redirect to login screen using go_router
-      // We access the context via navigatorKey since we have no BuildContext here
-      // context.go() clears entire navigation stack — user cannot go back to previous screen
+      /// Redirect to login screen using go_router
+      /// context.go() clears entire navigation stack — user cannot go back
       final context = navigatorKey.currentContext;
       if (context != null && context.mounted) {
         context.go(AppRoutes.login);
@@ -114,7 +112,7 @@ class AuthInterceptor extends Interceptor {
       }
     }
 
-    // Continue with the error so error_interceptor can also handle it
+    /// Continue with the error so ErrorInterceptor can also handle it
     return handler.next(err);
   }
 }

@@ -1,122 +1,284 @@
+/// MAIN
+/// Entry point of the SMS School Management System app.
+/// Initializes all core services before running the app.
+///
+/// Boot Order:
+///   1. Firebase initialization
+///   2. Dependency injection setup (get_it)
+///   3. Notification service initialization (FCM)
+///   4. App runs with router, theme, localizations
+import 'package:firebase_core/firebase_core.dart';
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
+import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_screenutil/flutter_screenutil.dart';
+import 'package:go_router/go_router.dart';
+import 'core/constants/app_routes.dart';
+import 'core/di/injection_container.dart';
+import 'core/services/notification_service.dart';
+import 'core/services/secure_storage_service.dart';
+import 'core/theme/app_theme.dart';
+import 'core/utils/app_logger.dart';
 
-void main() {
-  runApp(const MyApp());
+/// Global navigator key
+/// Shared across go_router, AuthInterceptor, NotificationService
+/// Allows navigation from anywhere without BuildContext
+final GlobalKey<NavigatorState> navigatorKey = GlobalKey<NavigatorState>();
+
+void main() async {
+  /// Ensure Flutter binding is initialized before any async operations
+  WidgetsFlutterBinding.ensureInitialized();
+
+  /// Lock app to portrait mode only
+  await SystemChrome.setPreferredOrientations([
+    DeviceOrientation.portraitUp,
+    DeviceOrientation.portraitDown,
+  ]);
+
+  /// Step 1 — Initialize Firebase
+  /// Must be done before any Firebase service is used
+  await Firebase.initializeApp();
+  AppLogger.info('Main: Firebase initialized');
+
+  /// Step 2 — Setup all dependencies via get_it
+  /// Must be done before accessing any service
+  await setupDependencies(navigatorKey: navigatorKey);
+  AppLogger.info('Main: Dependencies registered');
+
+  /// Step 3 — Initialize notification service
+  /// Sets up FCM, local notifications, permission requests
+  await getIt<NotificationService>().initialize();
+  AppLogger.info('Main: Notification service initialized');
+
+  /// Run the app
+  runApp(const SmsApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+// ─── App Widget ──────────────────────────────────────────────────────────────
 
-  // This widget is the root of your application.
+class SmsApp extends StatelessWidget {
+  const SmsApp({super.key});
+
   @override
   Widget build(BuildContext context) {
-    return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: ColorScheme.fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+    return ScreenUtilInit(
+      /// TODO: Update with real Figma frame size when shared
+      /// Open Figma → click on any screen frame → check W × H on right panel
+      designSize: const Size(390, 844),
+      minTextAdapt: true,
+      splitScreenMode: true,
+      builder: (context, child) {
+        return MaterialApp.router(
+          /// App title
+          title: 'SMS',
+
+          /// Hide debug banner
+          debugShowCheckedModeBanner: false,
+
+          /// Theme — uses all our AppColors, AppTextStyles constants
+          theme: AppTheme.lightTheme,
+
+          /// Router — go_router with route guards
+          routerConfig: _router,
+
+          /// Localization — English + Arabic (RTL)
+          localizationsDelegates: const [
+            // TODO: Add generated localization delegates when arb files are ready
+            // AppLocalizations.delegate,
+            // GlobalMaterialLocalizations.delegate,
+            // GlobalWidgetsLocalizations.delegate,
+            // GlobalCupertinoLocalizations.delegate,
+          ],
+          supportedLocales: const [
+            Locale('en'), // English
+            Locale('ar'), // Arabic
+          ],
+        );
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+// ─── Router ──────────────────────────────────────────────────────────────────
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
+/// go_router configuration
+/// All routes are defined here with guards
+/// Route guard checks token → redirects to login or dashboard
+final GoRouter _router = GoRouter(
+  /// Navigator key — must be the same global key used everywhere
+  navigatorKey: navigatorKey,
 
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
+  /// Initial route — splash screen
+  initialLocation: AppRoutes.splash,
 
-  final String title;
+  /// Route guard — runs before every navigation
+  /// Checks if user is logged in and redirects accordingly
+  redirect: (context, state) async {
+    final storageService = getIt<SecureStorageService>();
+    final hasToken = await storageService.hasToken();
+    final currentPath = state.uri.path;
 
-  @override
-  State<MyHomePage> createState() => _MyHomePageState();
-}
+    /// If user has no token and is not on login screen → redirect to login
+    if (!hasToken && currentPath != AppRoutes.login) {
+      AppLogger.info('Router: No token — redirecting to login');
+      return AppRoutes.login;
+    }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+    /// If user has token and is on login or splash → redirect to dashboard
+    if (hasToken &&
+        (currentPath == AppRoutes.login ||
+            currentPath == AppRoutes.splash)) {
+      AppLogger.info('Router: Token found — redirecting to dashboard');
+      return AppRoutes.dashboard;
+    }
 
-  void _incrementCounter() {
-    setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
-    });
-  }
+    /// No redirect needed
+    return null;
+  },
+
+  /// All app routes
+  routes: [
+    /// Splash screen — shown on app launch
+    GoRoute(
+      path: AppRoutes.splash,
+      builder: (context, state) => const _SplashScreen(),
+    ),
+
+    /// Login screen — shown when no token found
+    GoRoute(
+      path: AppRoutes.login,
+      builder: (context, state) => const _PlaceholderScreen(
+        title: 'Login Screen',
+        subtitle: 'Will be built with Figma',
+      ),
+    ),
+
+    /// Children list — shown after parent login
+    GoRoute(
+      path: AppRoutes.childrenList,
+      builder: (context, state) => const _PlaceholderScreen(
+        title: 'Children List',
+        subtitle: 'Will be built with Figma',
+      ),
+    ),
+
+    /// Dashboard — main screen after login
+    GoRoute(
+      path: AppRoutes.dashboard,
+      builder: (context, state) => const _PlaceholderScreen(
+        title: 'Dashboard',
+        subtitle: 'Will be built with Figma',
+      ),
+    ),
+
+    /// Notifications screen
+    GoRoute(
+      path: AppRoutes.notifications,
+      builder: (context, state) => const _PlaceholderScreen(
+        title: 'Notifications',
+        subtitle: 'Will be built with Figma',
+      ),
+    ),
+
+    /// Profile screen
+    GoRoute(
+      path: AppRoutes.profile,
+      builder: (context, state) => const _PlaceholderScreen(
+        title: 'Profile',
+        subtitle: 'Will be built with Figma',
+      ),
+    ),
+
+    /// TODO: Add remaining routes as features are built
+    /// classes, subjects, homework, video, live_classes
+  ],
+);
+
+// ─── Splash Screen ───────────────────────────────────────────────────────────
+
+/// Temporary splash screen shown on app launch
+/// Displays app name while router guard checks token
+/// Will be replaced with proper animated splash when Figma is shared
+class _SplashScreen extends StatelessWidget {
+  const _SplashScreen();
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
     return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
+      backgroundColor: Theme.of(context).colorScheme.primary,
+      body: const Center(
         child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
           mainAxisAlignment: MainAxisAlignment.center,
-          children: <Widget>[
-            const Text('You have pushed the button this many times:'),
+          children: [
+            Icon(
+              Icons.school_rounded,
+              size: 80,
+              color: Colors.white,
+            ),
+            SizedBox(height: 16),
             Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+              'SMS',
+              style: TextStyle(
+                fontSize: 32,
+                fontWeight: FontWeight.bold,
+                color: Colors.white,
+              ),
+            ),
+            SizedBox(height: 8),
+            Text(
+              'School Management System',
+              style: TextStyle(
+                fontSize: 14,
+                color: Colors.white70,
+              ),
             ),
           ],
         ),
       ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ), // This trailing comma makes auto-formatting nicer for build methods.
+    );
+  }
+}
+
+// ─── Placeholder Screen ──────────────────────────────────────────────────────
+
+/// Temporary placeholder screen used for all routes not yet built
+/// Shows route name so we can confirm navigation is working
+/// Will be replaced feature by feature when Figma is shared
+class _PlaceholderScreen extends StatelessWidget {
+  final String title;
+  final String subtitle;
+
+  const _PlaceholderScreen({
+    required this.title,
+    required this.subtitle,
+  });
+
+  @override
+  Widget build(BuildContext context) {
+    return Scaffold(
+      appBar: AppBar(title: Text(title)),
+      body: Center(
+        child: Column(
+          mainAxisAlignment: MainAxisAlignment.center,
+          children: [
+            Icon(
+              Icons.construction_rounded,
+              size: 64,
+              color: Theme.of(context).colorScheme.primary,
+            ),
+            const SizedBox(height: 16),
+            Text(
+              title,
+              style: Theme.of(context).textTheme.titleLarge,
+            ),
+            const SizedBox(height: 8),
+            Text(
+              subtitle,
+              style: Theme.of(context).textTheme.bodyMedium,
+            ),
+          ],
+        ),
+      ),
     );
   }
 }

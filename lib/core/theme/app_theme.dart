@@ -130,7 +130,7 @@ class AppTheme {
 
       // ─── Card ──────────────────────────────────────────────────────────
       /// Default styling for Card widgets
-      cardTheme: CardTheme(
+      cardTheme: CardThemeData(
         color: AppColors.surface,
         elevation: 0,
         shape: RoundedRectangleBorder(
